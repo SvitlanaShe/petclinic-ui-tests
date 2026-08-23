@@ -12,6 +12,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # Starts PetClinic AUT container on localhost:8080
+      - name: Start PetClinic App
+        run: |
+          docker run -d -p 8080:8080 --name petclinic springcommunity/spring-petclinic
+          echo "Waiting for PetClinic app on http://localhost:8080..."
+          timeout 60 bash -c 'until curl -s http://localhost:8080 > /dev/null; do sleep 2; done'
       - name: Checkout Code
         uses: actions/checkout@v4
 
