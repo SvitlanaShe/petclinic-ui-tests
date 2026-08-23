@@ -7,6 +7,9 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   ui-tests:
     runs-on: ubuntu-latest
@@ -22,7 +25,6 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # Clones and starts PetClinic AUT in the background on port 8080
       - name: Start PetClinic App
         run: |
           git clone https://github.com/spring-projects/spring-petclinic.git ../petclinic-app
@@ -31,12 +33,10 @@ jobs:
           echo "Waiting for PetClinic application to start on http://localhost:8080..."
           timeout 120 bash -c 'until curl -s http://localhost:8080 > /dev/null; do sleep 3; done'
 
-      # Runs your Selenium automated test suite against the live local app
       - name: Run Headless UI Tests
         run: mvn clean test -Dheadless=true -Dbrowser=CHROME
         continue-on-error: true
 
-      # Uploads Extent HTML report
       - name: Upload Extent HTML Report Artifact
         uses: actions/upload-artifact@v4
         if: always()
@@ -44,3 +44,11 @@ jobs:
           name: extent-test-report
           path: target/test-report/
           retention-days: 14
+
+      # Deploys report directly to GitHub Pages
+      - name: Deploy Report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/test-report
