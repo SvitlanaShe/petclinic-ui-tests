@@ -13,15 +13,19 @@ public class NavigationTest extends BaseTest {
         driver.get(BASE_URL);
         HomePage homePage = new HomePage(driver);
 
+        //Click Toggle menu if exists
+        clickNavMenu();
         // 1. Navigate to Find Owners
         FindOwnersPage findOwnersPage = homePage.clickFindOwnersMenu();
         assertThat(findOwnersPage.isAtPage()).isTrue();
 
         // 2. Navigate to Vets from Find Owners Page
+        clickNavMenu();
         VetsPage vetsPage = findOwnersPage.clickVeterinariansMenu();
         assertThat(vetsPage.isAtPage()).isTrue();
 
         // 3. Return Home from Vets Page
+        clickNavMenu();
         homePage = vetsPage.clickHomeMenu();
         assertThat(homePage.isAtPage()).isTrue();
     }
