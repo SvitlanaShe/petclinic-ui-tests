@@ -52,6 +52,13 @@ public class TestListener implements TestWatcher, BeforeAllCallback, BeforeTestE
     private static final Map<String, Status> finalTestStatuses = new ConcurrentHashMap<>();
     private static final java.util.List<String> skippedTestReasons = new java.util.concurrent.CopyOnWriteArrayList<>();
 
+    /**
+     * Helper to check if tests are running inside CI/CD (GitHub Actions, Jenkins, etc.)
+     */
+    private boolean isCiEnvironment() {
+        return System.getenv("GITHUB_ACTIONS") != null || System.getenv("CI") != null;
+    }
+
     @Override
     public void beforeAll(ExtensionContext context) {
         if (!registered) {
@@ -87,7 +94,6 @@ public class TestListener implements TestWatcher, BeforeAllCallback, BeforeTestE
         if (testThreadLocal.get() == null) {
             String browser = System.getProperty("browser", "CHROME").toUpperCase();
 
-            // Clear previous execution attempts (e.g., from retry extension)
             if (testMap.containsKey(testName)) {
                 extent.removeTest(testMap.get(testName));
             }
@@ -110,13 +116,11 @@ public class TestListener implements TestWatcher, BeforeAllCallback, BeforeTestE
         String testName = getTestName(context);
         String browser = System.getProperty("browser", "CHROME").toUpperCase();
 
-        // 1. Remove any pre-existing entry for this test name in Extent
         if (testMap.containsKey(testName)) {
             extent.removeTest(testMap.get(testName));
             testMap.remove(testName);
         }
 
-        // 2. Create a clean test node dedicated exclusively to SKIP status
         ExtentTest test = extent.createTest(testName);
         test.assignCategory(browser);
         test.log(Status.SKIP, "Test Skipped: " + disableReason);
@@ -163,17 +167,20 @@ public class TestListener implements TestWatcher, BeforeAllCallback, BeforeTestE
     public void close() {
         if (extent != null) {
             extent.flush();
-            startLocalReportServer();
-            sendTeamsNotification();
 
-            try {
-                boolean isCI = System.getenv("GITHUB_ACTIONS") != null;
-                if (!isCI) {
-                    System.out.println("[REPORT SERVER] Keeping server alive for 0.5 minutes...");
+            // ONLY run local server and local Teams notification if NOT running on CI/CD
+            if (!isCiEnvironment()) {
+                startLocalReportServer();
+                sendTeamsNotification();
+
+                try {
+                    System.out.println("[REPORT SERVER] Keeping local server alive for 0.5 minutes...");
                     Thread.sleep(30_000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            } else {
+                System.out.println("[CI ENVIRONMENT DETECTED] Skipping local Teams notification and local HTTP server.");
             }
         }
     }
