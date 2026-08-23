@@ -53,16 +53,38 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/test-report
 
-          # Sends execution summary card to Teams
+        # Sends notification card directly to Microsoft Teams
       - name: Send Microsoft Teams Notification
-        uses: jkdrew/teams-notification@v1.0.1
         if: always()
-        with:
-          webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
-          title: "UI Test Execution Summary"
-          text: |
-            **Status:** ${{ job.status }}
-            **Repository:** ${{ github.repository }}
-            **Branch:** ${{ github.ref_name }}
-            
-            [View GitHub Pages Test Report](https://svitlanashe.github.io/petclinic-ui-tests/test-report.html)
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        run: |
+          STATUS="${{ job.status }}"
+          COLOR="36a64f"
+          if [ "$STATUS" != "success" ]; then
+            COLOR="ff0000"
+          fi
+
+          curl -H "Content-Type: application/json" -d "{
+            \"@type\": \"MessageCard\",
+            \"@context\": \"http://schema.org/extensions\",
+            \"themeColor\": \"$COLOR\",
+            \"summary\": \"UI Automation Test Results\",
+            \"sections\": [{
+              \"activityTitle\": \"UI Automation Pipeline Finished\",
+              \"facts\": [
+                {\"name\": \"Status\", \"value\": \"$STATUS\"},
+                {\"name\": \"Repository\", \"value\": \"${{ github.repository }}\"},
+                {\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\"}
+              ],
+              \"markdown\": true
+            }],
+            \"potentialAction\": [{
+              \"@type\": \"OpenUri\",
+              \"name\": \"View HTML Test Report\",
+              \"targets\": [{
+                \"os\": \"default\",
+                \"uri\": \"https://svitlanashe.github.io/petclinic-ui-tests/test-report.html\"
+              }]
+            }]
+          }" $TEAMS_WEBHOOK_URL
