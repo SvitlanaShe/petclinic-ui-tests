@@ -12,13 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Starts PetClinic AUT container on localhost:8080
-      - name: Start PetClinic App
-        run: |
-          docker run -d -p 8080:8080 --name petclinic springcommunity/spring-petclinic
-          echo "Waiting for PetClinic app on http://localhost:8080..."
-          timeout 60 bash -c 'until curl -s http://localhost:8080 > /dev/null; do sleep 2; done'
-      - name: Checkout Code
+      - name: Checkout Test Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -28,10 +22,21 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      # Clones and starts PetClinic AUT in the background on port 8080
+      - name: Start PetClinic App
+        run: |
+          git clone https://github.com/spring-projects/spring-petclinic.git ../petclinic-app
+          cd ../petclinic-app
+          ./mvnw spring-boot:run &
+          echo "Waiting for PetClinic application to start on http://localhost:8080..."
+          timeout 120 bash -c 'until curl -s http://localhost:8080 > /dev/null; do sleep 3; done'
+
+      # Runs your Selenium automated test suite against the live local app
       - name: Run Headless UI Tests
         run: mvn clean test -Dheadless=true -Dbrowser=CHROME
         continue-on-error: true
 
+      # Uploads Extent HTML report
       - name: Upload Extent HTML Report Artifact
         uses: actions/upload-artifact@v4
         if: always()
