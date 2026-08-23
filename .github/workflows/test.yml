@@ -53,7 +53,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/test-report
 
-        # Sends notification card directly to Microsoft Teams
+      # Sends notification card directly to Microsoft Teams
       - name: Send Microsoft Teams Notification
         if: always()
         env:
