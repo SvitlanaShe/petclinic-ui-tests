@@ -52,3 +52,17 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/test-report
+
+          # Sends execution summary card to Teams
+      - name: Send Microsoft Teams Notification
+        uses: jkdrew/teams-notification@v1.0.1
+        if: always()
+        with:
+          webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          title: "UI Test Execution Summary"
+          text: |
+            **Status:** ${{ job.status }}
+            **Repository:** ${{ github.repository }}
+            **Branch:** ${{ github.ref_name }}
+            
+            [View GitHub Pages Test Report](https://svitlanashe.github.io/petclinic-ui-tests/test-report.html)
