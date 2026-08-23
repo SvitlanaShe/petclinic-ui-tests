@@ -1,22 +1,20 @@
-name: UI Automation Tests
+name: UI Automation Pipeline
 
 on:
   push:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
-  test:
+  ui-tests:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout the source code
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Set up JDK 17 with Maven caching
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -24,24 +22,22 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # 3. Spin up local PetClinic AUT server in background
-      - name: Start PetClinic Application Server
+      # 1. Start the PetClinic Application in Docker
+      - name: Start PetClinic App
         run: |
-          # Option A: If running via Docker (Recommended)
-          # docker run -d -p 8080:8080 springcommunity/spring-petclinic
-          
-          # Option B: Mock startup check (ensure target backend is reachable)
-          echo "Waiting for test target on http://localhost:8080..."
+          docker run -d -p 8080:8080 --name petclinic springcommunity/spring-petclinic
+          echo "Waiting for PetClinic app to be ready on http://localhost:8080..."
+          timeout 60 bash -c 'until curl -s http://localhost:8080 > /dev/null; do sleep 2; done'
 
-      # 4. Execute Maven tests in Headless Chrome mode
-      - name: Run UI Tests
-        run: mvn clean test -Dheadless=true -Dbrowser=chrome
-        continue-on-error: true # Ensures artifact upload step runs even if tests fail
+      # 2. Run UI Automation Tests
+      - name: Run Headless UI Tests
+        run: mvn clean test -Dheadless=true -Dbrowser=CHROME
+        continue-on-error: true
 
-      # 5. Upload Extent HTML Report as a GitHub Artifact
-      - name: Upload Test Report Artifact
+      # 3. Save Test Report
+      - name: Upload Extent HTML Report Artifact
         uses: actions/upload-artifact@v4
-        if: always() # Always run regardless of test pass/fail status
+        if: always()
         with:
           name: extent-test-report
           path: target/test-report/
