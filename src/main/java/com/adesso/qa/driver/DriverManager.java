@@ -43,7 +43,9 @@ public class DriverManager {
             log.info("Creating [{}] driver instance (Headless: {})", driverType, isHeadless);
 
             WebDriver driver = createDriver(driverType, isHeadless);
-            driver.manage().window().maximize();
+
+            // Set explicit Dimension directly (works reliably in headless & headful)
+            driver.manage().window().setSize(new org.openqa.selenium.Dimension(1920, 1080));
             driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
 
             driverThreadLocal.set(driver);
@@ -57,14 +59,12 @@ public class DriverManager {
                 WebDriverManager.firefoxdriver().setup();
                 FirefoxOptions firefoxOptions = new FirefoxOptions();
 
-                // Standard double-dash headless flag
                 if (isHeadless) {
                     firefoxOptions.addArguments("--headless");
+                    firefoxOptions.addArguments("--width=1920");
+                    firefoxOptions.addArguments("--height=1080");
                 }
-
-                // Ensures clean, isolated profile per thread during parallel runs
                 firefoxOptions.addArguments("-private");
-
                 return new FirefoxDriver(firefoxOptions);
 
             case CHROME:
@@ -74,16 +74,17 @@ public class DriverManager {
                 chromeOptions.addArguments("--remote-allow-origins=*");
                 chromeOptions.addArguments("--lang=en-US");
 
+                // Always pass window-size argument to ChromeOptions
+                chromeOptions.addArguments("--window-size=1920,1080");
+
                 if (isHeadless) {
                     chromeOptions.addArguments("--headless=new");
-                    chromeOptions.addArguments("--no-sandbox"); // Required for Linux container environments
-                    chromeOptions.addArguments("--disable-dev-shm-usage"); // Overcomes resource limitations in shared memory
-                    chromeOptions.addArguments("--window-size=1920,1080");
+                    chromeOptions.addArguments("--no-sandbox");
+                    chromeOptions.addArguments("--disable-dev-shm-usage");
                 }
                 return new ChromeDriver(chromeOptions);
         }
     }
-
     public static void quitDriver() {
         if (driverThreadLocal.get() != null) {
             driverThreadLocal.get().quit();
