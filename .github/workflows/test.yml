@@ -53,38 +53,46 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/test-report
 
-      # Sends notification card directly to Microsoft Teams
+     # Sends notification with direct link to Microsoft Teams
       - name: Send Microsoft Teams Notification
         if: always()
         env:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
         run: |
           STATUS="${{ job.status }}"
-          COLOR="36a64f"
-          if [ "$STATUS" != "success" ]; then
-            COLOR="ff0000"
-          fi
-
+          
           curl -H "Content-Type: application/json" -d "{
-            \"@type\": \"MessageCard\",
-            \"@context\": \"http://schema.org/extensions\",
-            \"themeColor\": \"$COLOR\",
-            \"summary\": \"UI Automation Test Results\",
-            \"sections\": [{
-              \"activityTitle\": \"UI Automation Pipeline Finished\",
-              \"facts\": [
-                {\"name\": \"Status\", \"value\": \"$STATUS\"},
-                {\"name\": \"Repository\", \"value\": \"${{ github.repository }}\"},
-                {\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\"}
-              ],
-              \"markdown\": true
-            }],
-            \"potentialAction\": [{
-              \"@type\": \"OpenUri\",
-              \"name\": \"View HTML Test Report\",
-              \"targets\": [{
-                \"os\": \"default\",
-                \"uri\": \"https://svitlanashe.github.io/petclinic-ui-tests/test-report.html\"
-              }]
-            }]
+            \"type\": \"message\",
+            \"attachments\": [
+              {
+                \"contentType\": \"application/vnd.microsoft.card.adaptive\",
+                \"contentUrl\": null,
+                \"content\": {
+                  \"\$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\",
+                  \"type\": \"AdaptiveCard\",
+                  \"version\": \"1.4\",
+                  \"body\": [
+                    {
+                      \"type\": \"TextBlock\",
+                      \"text\": \"UI Automation Pipeline Finished\",
+                      \"weight\": \"Bolder\",
+                      \"size\": \"Medium\"
+                    },
+                    {
+                      \"type\": \"FactSet\",
+                      \"facts\": [
+                        { \"title\": \"Status:\", \"value\": \"$STATUS\" },
+                        { \"title\": \"Repository:\", \"value\": \"${{ github.repository }}\" },
+                        { \"title\": \"Branch:\", \"value\": \"${{ github.ref_name }}\" }
+                      ]
+                    },
+                    {
+                      \"type\": \"TextBlock\",
+                      \"text\": \"[👉 Click Here to Open HTML Test Report](https://svitlanashe.github.io/petclinic-ui-tests/test-report.html)\",
+                      \"wrap\": true
+                    }
+                  ]
+                }
+              }
+            ]
           }" $TEAMS_WEBHOOK_URL
