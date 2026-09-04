@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 
 import com.adesso.qa.pages.FindOwnersPage;
 import com.adesso.qa.pages.HomePage;
-import com.adesso.qa.pages.VetsPage;
 
 public class FailedNavigationTest extends BaseTest {
 
@@ -53,7 +52,8 @@ public class FailedNavigationTest extends BaseTest {
     @Test
     @DisplayName("Header Title Validation - Intentional Failure for Report Demo")
     void testHeaderTitleIntentionalFailure() {
-        String actualTitle = "Welcome to PetClinic";
+        driver.get(BASE_URL);
+        String actualTitle = "Welcome";
         String expectedTitle = "PetClinic - Admin Dashboard"; // Mismatch to force failure
 
         // This assertion will fail and trigger your listener's failure handling

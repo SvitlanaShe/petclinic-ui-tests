@@ -2,6 +2,7 @@ package com.adesso.qa.tests;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +38,13 @@ public class PetClinicE2ETest extends BaseTest {
 
         OwnerInformationPage infoPage = new OwnerInformationPage(driver);
         assertThat(infoPage.getOwnerName()).contains("John " + uniqueLastName);
+
+        String successMessage = findOwnersPage.getSuccessMessageText();
+        Assertions.assertThat(successMessage)
+                .as("Verify success toast notification after owner creation")
+                .containsIgnoringCase("Owner Created") // Adjust string based on exact UI text
+                .isNotEmpty();
+
     }
 
     @Test
@@ -55,6 +63,12 @@ public class PetClinicE2ETest extends BaseTest {
         // First creation
         infoPage.clickAddNewPet();
         addPetPage.addPet(petName, "2023-01-01", "dog");
+
+        String successMessage = findOwnersPage.getSuccessMessageText();
+        Assertions.assertThat(successMessage)
+                .as("Verify success toast notification after adding the pet")
+                .containsIgnoringCase("New Pet has been Added")
+                .isNotEmpty();
 
         // Verify pet was added before trying to add duplicate
         assertThat(infoPage.hasPet(petName))
@@ -85,6 +99,12 @@ public class PetClinicE2ETest extends BaseTest {
         AddPetPage addPetPage = new AddPetPage(driver);
         String petName = "Milo";
         addPetPage.addPet(petName, "2022-05-05", "cat");
+
+        String successMessage = addPetPage.getSuccessMessageText();
+        Assertions.assertThat(successMessage)
+                .as("Verify success toast notification after adding the pet")
+                .isNotEmpty()
+                .containsIgnoringCase("New pet has been added");
 
         // Add visit to fresh pet
         infoPage.clickAddVisitForPet(petName);

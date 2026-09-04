@@ -1,5 +1,6 @@
 package com.adesso.qa.tests;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +24,7 @@ public abstract class BaseTest {
     protected static final String BASE_URL = System.getProperty("baseUrl", "http://localhost:8080");
     protected final Logger log = LoggerFactory.getLogger(getClass());
     protected WebDriver driver;
-    protected WebDriverWait wait;
+    WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
     // Bootstrap navbar toggler selector
     private final By navbarToggler = By.cssSelector("button.navbar-toggler");

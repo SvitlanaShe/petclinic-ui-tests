@@ -1,9 +1,8 @@
 package com.adesso.qa.pages;
 
 import java.time.Duration;
+import java.util.Objects;
 
-import org.openqa.selenium.By;
-import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -12,7 +11,17 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import com.adesso.qa.driver.DriverManager;
 
+/**
+ * Page Object for the "Add Visit" form.
+ *
+ * <p>Encapsulates every locator and interaction needed to record a new
+ * visit and exposes a single, intention-revealing entry point,
+ * {@link #addVisit(String)}, to test classes. Callers should not need to
+ * know the underlying field ids, locators, or wait strategy.</p>
+ */
 public class AddVisitPage extends BasePage {
+
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
 
     @FindBy(id = "description")
     private WebElement descriptionInput;
@@ -20,45 +29,51 @@ public class AddVisitPage extends BasePage {
     @FindBy(css = "button[type='submit']")
     private WebElement submitButton;
 
+    private final WebDriverWait wait;
+
     public AddVisitPage(WebDriver driver) {
         super(driver);
+        this.wait = new WebDriverWait(driver, DEFAULT_TIMEOUT);
     }
 
-    public void addVisit(String description) {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+    // Default constructor option using Singleton, consistent with BasePage.
+    public AddVisitPage() {
+        this(DriverManager.getDriver());
+    }
 
-        // 1. Fill description field
-        WebElement descField = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("description")));
-        descField.clear();
-        descField.sendKeys(description);
+    /**
+     * Fills out and submits the "Add Visit" form, then waits for navigation
+     * back to the owner details page.
+     *
+     * @param description the visit description; must not be {@code null}
+     * @throws IllegalArgumentException if {@code description} is {@code null}
+     */
+    public void addVisit(String description) {
+        Objects.requireNonNull(description, "description must not be null");
+
+        log.info("Entering visit description: '{}'", description);
+
+        WebElement field = wait.until(ExpectedConditions.visibilityOf(descriptionInput));
+        field.clear();
+        field.sendKeys(description);
 
         clickAddVisit();
-        // 2. Wait for redirect back to Owner Details page
+
         wait.until(ExpectedConditions.urlContains("/owners/"));
+        log.info("Visit added successfully, navigated to: {}", driver.getCurrentUrl());
     }
 
-
+    /**
+     * Clicks the "Add Visit" submit button, scrolling it into view first
+     * and falling back to a JavaScript click if the native click is
+     * intercepted (e.g. by an overlay or sticky header).
+     *
+     * <p>Exposed separately from {@link #addVisit(String)} so tests can
+     * submit the form without a description, e.g. to verify validation
+     * errors.</p>
+     */
     public void clickAddVisit() {
-        WebDriverWait wait = new WebDriverWait(DriverManager.getDriver(), Duration.ofSeconds(10));
-
-        // 1. Locate the "Add Visit" submit button
-        WebElement submitBtn = wait.until(ExpectedConditions.elementToBeClickable(
-                By.cssSelector("button.btn.btn-primary[type='submit'], button[type='submit']")
-        ));
-
-        // 2. Scroll into view and click natively (or fire event)
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", submitBtn);
-
-        try {
-            submitBtn.click();
-        } catch (Exception e) {
-            // Dispatches full click event tree if standard click is intercepted
-            ((JavascriptExecutor) driver).executeScript(
-                    "var evt = document.createEvent('MouseEvents');" +
-                            "evt.initEvent('click', true, true);" +
-                            "arguments[0].dispatchEvent(evt);", submitBtn
-            );
-        }
-
+        WebElement button = wait.until(ExpectedConditions.elementToBeClickable(submitButton));
+        clickWithScrollAndFallback(button);
     }
 }

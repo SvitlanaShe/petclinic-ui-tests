@@ -1,9 +1,16 @@
 package com.adesso.qa.pages;
 
+import java.time.Duration;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.ElementClickInterceptedException;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +19,11 @@ import com.adesso.qa.driver.DriverManager;
 public abstract class BasePage {
 
     protected WebDriver driver;
+    protected WebDriverWait wait;
     protected final Logger log = LoggerFactory.getLogger(getClass());
+
+    // Single source of truth for success alert locator
+    private final By successAlert = By.cssSelector("#success-message span");
 
     // Top Navigation Bar Locators
     @FindBy(css = "a[title='home page']")
@@ -29,6 +40,7 @@ public abstract class BasePage {
 
     public BasePage(WebDriver driver) {
         this.driver = driver;
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         PageFactory.initElements(driver, this);
     }
 
@@ -73,5 +85,44 @@ public abstract class BasePage {
         String currentUrl = getCurrentUrl();
         log.info("Checking if current URL [{}] contains path [{}]", currentUrl, expectedPath);
         return currentUrl.contains(expectedPath);
+    }
+
+    // --- JavaScript Interaction Helpers ---
+
+    protected void scrollIntoView(WebElement element) {
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
+    }
+
+    protected void clickRobustly(WebElement element) {
+        try {
+            element.click();
+        } catch (ElementClickInterceptedException e) {
+            log.warn("Native click was intercepted; falling back to JavaScript click", e);
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+        }
+    }
+
+    protected void clickWithScrollAndFallback(WebElement element) {
+        scrollIntoView(element);
+        clickRobustly(element);
+    }
+
+    protected void setValueViaJavaScript(WebElement field, String value) {
+        ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].value = arguments[1];"
+                        + "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
+                field, value);
+    }
+
+    // --- Banner Assertions ---
+
+    /**
+     * Captures the text inside the success banner safely, even if it autodisappears.
+     */
+    public String getSuccessMessageText() {
+        WebElement messageSpan = wait.until(
+                ExpectedConditions.presenceOfElementLocated(successAlert)
+        );
+        return messageSpan.getAttribute("textContent").trim();
     }
 }
